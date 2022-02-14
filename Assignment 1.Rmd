@@ -1,0 +1,164 @@
+---
+title: "Data 608 Assignment 1"
+author: "Maliat I"
+date: "2/12/2022"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r,include=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(ggplot2)
+library(dplyr)
+library(funModeling)
+```
+
+
+```{r}
+inc <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module1/Data/inc5000_data.csv", header= TRUE)
+GrowingCompanies <- inc
+```
+
+```{r}
+head(inc)
+```
+
+```{r}
+summary(inc)
+```
+
+### Think a bit on what these summaries mean. Use the space below to add some more relevant non-visual exploratory information you think helps you understand this data:
+
+```{r}
+glimpse(inc)
+```
+
+
+```{r}
+Exploration=funModeling::data_integrity(inc)
+# returns a detailed summary of all variables
+print(Exploration)
+
+```
+
+
+###  Question 1
+
+### Create a graph that shows the distribution of companies in the dataset by State (ie how many are in each state). There are a lot of States, so consider which axis you should use. This visualization is ultimately going to be consumed on a 'portrait' oriented screen (ie taller than wide), which should further guide your layout choices.
+
+
+
+```{r, fig.width=10,fig.height=11}
+state <- inc %>% 
+  group_by(State) %>%
+  summarise(Count = n())
+
+ggplot(data = state, aes(x = reorder(State, Count), y = Count,fill=reorder(State,Count))) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Distribution of Companies by State", x = "State", y = "Number of Companies")
+```
+### Quesiton 2
+
+### Lets dig in on the state with the 3rd most companies in the data set. Imagine you work for the state and are interested in how many people are employed by companies in different industries. Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's  complete.cases() function.) In addition to this, your graph should show how variable the ranges are, and you should deal with outliers.
+
+### NY state has the third most companies in dataset.
+
+```{r}
+Employment <- inc %>%
+  filter(State == "NY") %>%
+  filter(complete.cases(.))
+
+ggplot(Employment, aes(x = Industry, y = Employees)) +
+  geom_boxplot() +
+  coord_flip() +
+  labs(title = "Employments Distribution by Industry in NY", x = "Industry", y = "EmployeesCount")
+```
+
+
+```{r, fig.width=10,fig.height=11}
+colourCount = length(unique(Employment$Industry))
+getPalette = colorRampPalette(brewer.pal(9, "Set1"))
+Employment %>%
+  ggplot(aes(x=Industry, y=Employees, fill=Industry)) +
+  geom_boxplot()+
+  geom_jitter(width=0.15, alpha=0.5)+
+  scale_y_log10()+
+  labs(x="Industry") +
+  theme(legend.position="none")+
+  scale_x_discrete(guide = guide_axis(n.dodge=2))+
+   scale_fill_manual(values = getPalette(colourCount))
+
+
+```
+### Handling Outlier
+```{r, fig.width=10,fig.height=11}
+colourCount = length(unique(Employment$Industry))
+getPalette = colorRampPalette(brewer.pal(8, "Set1"))
+ggplot(Employment, aes(x = Industry, y = Employees, fill=Industry)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(title =  "Employments Distribution by Industry in NY", x = "Industry", y = "Number of Employees") +
+  coord_cartesian(ylim = c(0, 1500)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+   scale_fill_manual(values = getPalette(colourCount))
+```
+```{r}
+colourCount = length(unique(Employment$Industry))
+getPalette = colorRampPalette(brewer.pal(8, "Set1"))
+ggplot(Employment, aes(x = Industry, y = Employees)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(title = "Distribution of Employments by Industry in NY", x = "Industry", y = "Number of Employees") +
+  coord_cartesian(ylim = c(0, 1500)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+   scale_fill_manual(values = getPalette(colourCount))
+```
+### Question 3
+
+### Now imagine you work for an investor and want to see which industries generate the most revenue per employee. Create a chart that makes this information clear. Once again, the distribution per industry should be shown.
+
+```{r}
+colourCount = length(unique(Employment$Industry))
+getPalette = colorRampPalette(brewer.pal(8, "Paired"))
+```
+
+
+```{r}
+revenue <- inc %>%
+  group_by(Industry) %>%
+  summarise(TotalRev = sum(Revenue), TotalEmp = sum(Employees), Revemp = TotalRev/TotalEmp) %>%
+  arrange(desc(Revemp)) %>%
+  na.omit()
+
+ggplot(data = revenue, aes(x = reorder(Industry, Revemp), y = Revemp,fill=reorder(Industry, Revemp))) +
+  geom_bar(stat = "identity") +
+  labs(title = "Revenue&Employee&Industry", x = "Industy", y = "Revenue per Employee") +
+  coord_flip()+
+   scale_fill_manual(values = getPalette(colourCount))
+```
+
+
+```{r}
+revenue <- inc %>%
+  group_by(Industry) %>%
+  summarise(TotalRev = sum(Revenue), TotalEmp = sum(Employees), Revemp = TotalRev/TotalEmp,growth_rate = mean(Growth_Rate)) %>%
+  arrange(desc(Revemp)) %>%
+  na.omit()
+
+ggplot(data = revenue, aes(x = reorder(Industry, Revemp), y = Revemp,fill=growth_rate)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Revenue&Employee&Industry", x = "Industy", y = "Revenue per Employee") +
+  coord_flip()
+
+
+```
+
+
+
